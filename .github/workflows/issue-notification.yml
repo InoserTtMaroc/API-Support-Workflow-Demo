@@ -1,0 +1,38 @@
+name: Issue Email Notification
+on:
+  issues:
+    types: [opened, reopened, closed, assigned]
+  issue_comment:
+    types: [created]
+
+jobs:
+  send-notification:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set email subject for issue
+        if: github.event_name == 'issues'
+        run: echo "EMAIL_SUBJECT=[GitHub Issue] ${{ github.event.issue.title }}" >> $GITHUB_ENV
+
+      - name: Set email subject for comment
+        if: github.event_name == 'issue_comment'
+        run: echo "EMAIL_SUBJECT=[GitHub Comment] New comment on ${{ github.event.issue.title }}" >> $GITHUB_ENV
+
+      - name: Send email notification
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.MAIL_SERVER }}
+          server_port: ${{ secrets.MAIL_PORT }}
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: ${{ env.EMAIL_SUBJECT }}
+          body: |
+            ${{ github.event.action }} by ${{ github.actor }}
+            
+            ${{ github.event.issue.html_url }}
+            
+            ${{ github.event.issue.body || github.event.comment.body }}
+            
+            --- 
+            This is an automated notification from GitHub Actions.
+          to: ${{ secrets.TEAM_EMAIL }}
+          from: GitHub Actions
